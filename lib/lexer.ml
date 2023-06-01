@@ -1,0 +1,78 @@
+(* A lexer has the following signature *)
+module type LEXICAL = sig
+    type token = Id of string | Key of string
+    val scan: string -> token list
+end
+
+(* A token is either an identifier Id or a keyword Key. This scanner does not
+ recognise numbers. Calling scan performs lexical analysis on a string and returns
+ the resulting list of tokens. *)
+
+(* Before we can parse a language we must specify its vocabulary. To classify tokens
+   as either identifiers or keywords the scanner must be supplied with an instance
+   of KEYWORD *)
+
+(** the list [alphas] defines the alphanumeric keywords like [if] and [let] while
+    symbols list symbolic keywords like [(] and [)]. The two kinds of keyword are treated
+    differently: 
+        - A string of alphanumerics is scanned as far as possible until it is no longer
+          followed by a letter or digit. It is classified as a keyword iff it belongs to alphas.
+        - A string of symbolic characters is scanned until it matches some element of [symbols],
+          or until it is not followed by another symbolic character. It is always classified as
+          a keyword. For instance if [(] is in symbols then "((" is scanned as two "(" tokens,
+          else as one "((" token. *)
+module type KEYWORD = sig
+    val alphas: string list
+    val symbols: string list
+end
+
+
+let rec seq_split f sq =
+    match sq () with
+    | Seq.Nil -> (Seq.empty, Seq.empty)
+    | Seq.Cons (x, sq) when f x -> let left, right = seq_split f sq in (Seq.cons x left, right)
+    | Seq.Cons _ -> (Seq.empty, sq)
+                          
+
+module Lexical (Keyword : KEYWORD) : LEXICAL = struct
+    type token = Id of string | Key of string
+
+    let is_alpha char = 
+        let code = Char.code char in 
+        (65 <= code && code <= 90) (*Uppercase letters *)
+        || (97 <= code && code <= 122) (*Lowercase letters *)
+        || (48 <= code && code <= 57) (* Digits *)
+
+    let is_punct char = 
+        let code = Char.code char in 
+        33 <= code && code <= 126 && not (is_alpha char)
+
+    let rec scan_symbol sym chars =
+        if List.mem sym Keyword.symbols 
+        then (Key sym, chars)
+        else match chars() with
+            | Seq.Cons (c, chars') when is_punct c -> 
+                    scan_symbol (sym ^ String.make 1 c) chars'
+            | Seq.Nil | Seq.Cons _ -> (Key sym, chars)
+
+
+    let rec scanning toks chars =
+        match chars() with
+        | Seq.Nil -> List.rev toks
+        | Seq.Cons (c, rest) ->
+                if is_alpha c
+                then 
+                    let tok_seq, chars' = seq_split is_alpha chars in
+                    let tok = String.of_seq tok_seq in
+                    if List.mem tok Keyword.alphas 
+                    then scanning (Key tok :: toks) chars'
+                    else scanning (Id tok :: toks) chars'
+                else if is_punct c
+                then 
+                    let (tok, chars') = scan_symbol (String.make 1 c) rest in
+                    scanning (tok :: toks) chars'
+                else scanning toks rest (* Ignore eg whitespace *)
+                     
+
+    let scan a = scanning [] (String.to_seq a)
+end
