@@ -1,16 +1,7 @@
-(* A lexer has the following signature *)
 module type LEXICAL = sig
     type token = Id of string | Key of string
     val scan: string -> token list
 end
-
-(* A token is either an identifier Id or a keyword Key. This scanner does not
- recognise numbers. Calling scan performs lexical analysis on a string and returns
- the resulting list of tokens. *)
-
-(* Before we can parse a language we must specify its vocabulary. To classify tokens
-   as either identifiers or keywords the scanner must be supplied with an instance
-   of KEYWORD *)
 
 (** the list [alphas] defines the alphanumeric keywords like [if] and [let] while
     symbols list symbolic keywords like [(] and [)]. The two kinds of keyword are treated
@@ -27,6 +18,8 @@ module type KEYWORD = sig
 end
 
 
+(** [split f sq] is a pair of sequence s1, s2 such that s1 is the initial segment of sq for which
+    f is true of all elements, and s2 is the remainder of sq. *)
 let rec seq_split f sq =
     match sq () with
     | Seq.Nil -> (Seq.empty, Seq.empty)
