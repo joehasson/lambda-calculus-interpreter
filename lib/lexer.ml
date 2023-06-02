@@ -30,6 +30,10 @@ let rec seq_split f sq =
 module Lexical (Keyword : KEYWORD) : LEXICAL = struct
     type token = Id of string | Key of string
 
+    let is_digit = function
+    | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> true
+    | _ -> false
+
     let is_alpha char = 
         let code = Char.code char in 
         (65 <= code && code <= 90) (*Uppercase letters *)
@@ -49,11 +53,17 @@ module Lexical (Keyword : KEYWORD) : LEXICAL = struct
             | Seq.Nil | Seq.Cons _ -> (Key sym, chars)
 
 
+    (** [scanning [] chars] is a list of all the tokens in chars *)
     let rec scanning toks chars =
         match chars() with
         | Seq.Nil -> List.rev toks
         | Seq.Cons (c, rest) ->
-                if is_alpha c
+                if is_digit c
+                then
+                    let tok_seq, chars' = seq_split is_alpha chars in
+                    let tok = String.of_seq tok_seq in
+                    scanning (Key tok :: toks) chars'
+                else if is_alpha c
                 then 
                     let tok_seq, chars' = seq_split is_alpha chars in
                     let tok = String.of_seq tok_seq in
@@ -67,5 +77,7 @@ module Lexical (Keyword : KEYWORD) : LEXICAL = struct
                 else scanning toks rest (* Ignore eg whitespace *)
                      
 
-    let scan a = scanning [] (String.to_seq a)
+    (** [scan s] is a list of all the tokens in s *)
+    let scan s = scanning [] (String.to_seq s)
 end
+
