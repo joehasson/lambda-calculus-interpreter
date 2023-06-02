@@ -1,2 +1,3 @@
 (test
- (name lambda_calculus_interpreter))
+ (name lambda_calculus_interpreter)
+ (libraries ounit2 lambda_calculus_interpreter))

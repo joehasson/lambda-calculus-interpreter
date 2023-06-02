@@ -1,2 +1,2 @@
 (library
- (name lambda_calculus_interpreter))
+ (public_name lambda_calculus_interpreter))
