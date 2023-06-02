@@ -60,7 +60,7 @@ module Lexical (Keyword : KEYWORD) : LEXICAL = struct
         | Seq.Cons (c, rest) ->
                 if is_digit c
                 then
-                    let tok_seq, chars' = seq_split is_alpha chars in
+                    let tok_seq, chars' = seq_split is_digit chars in
                     let tok = String.of_seq tok_seq in
                     scanning (Key tok :: toks) chars'
                 else if is_alpha c
