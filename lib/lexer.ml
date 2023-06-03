@@ -11,10 +11,15 @@ end
         - A string of symbolic characters is scanned until it matches some element of [symbols],
           or until it is not followed by another symbolic character. It is always classified as
           a keyword. For instance if [(] is in symbols then "((" is scanned as two "(" tokens,
-          else as one "((" token. *)
+          else as one "((" token. 
+
+    Invariant I made up for exercises: comment_start and comment_end cannot begin with alphanumeric
+    characters. *)
 module type KEYWORD = sig
     val alphas: string list
     val symbols: string list
+    val comment_start: string
+    val comment_end: string
 end
 
 
@@ -25,10 +30,52 @@ let rec seq_split f sq =
     | Seq.Nil -> (Seq.empty, Seq.empty)
     | Seq.Cons (x, sq) when f x -> let left, right = seq_split f sq in (Seq.cons x left, right)
     | Seq.Cons _ -> (Seq.empty, sq)
-                          
 
-module Lexical (Keyword : KEYWORD) : LEXICAL = struct
+let rec seq_take n sq = 
+    let open Seq in
+    match n, sq() with
+    | 0, _ -> fun () -> Nil 
+    | _, Nil -> failwith "Out of bounds"
+    | n, Cons (x, xs) -> fun () -> Cons(x, seq_take (n-1) xs)
+                          
+let rec seq_drop n sq = 
+    let open Seq in
+    match n, sq() with
+    | 0, _ -> sq
+    | _, Nil -> failwith "Out of bounds"
+    | n, Cons (_, xs) -> seq_drop (n-1) xs
+
+module Lexical (Keyword : KEYWORD) = struct
     type token = Id of string | Key of string
+
+    (** [ignore comments sq] is the sequence which is the result of ignoring every 
+        character in [sq] which falls between the comment delimiters 
+        [Keyword.comment_start] and [Keyword.comment_end] *)
+    let ignore_comments sq =
+        let open Seq in
+        let c_start = Keyword.comment_start.[0] in
+        let c_end = Keyword.comment_end.[0] in
+        let rec accumulate_until_open sq =
+            match sq () with
+            | Cons (x, xs) when x=c_start ->
+                    let to_compare = seq_take (String.length Keyword.comment_start) sq in
+                    if String.of_seq to_compare = Keyword.comment_start
+                    then drop_until_close sq
+                    else fun () -> Cons (x, accumulate_until_open xs)
+            | Cons (x, xs) -> fun () -> Cons(x, accumulate_until_open xs)
+            | Nil -> fun () -> Nil
+        and drop_until_close sq =
+            match sq () with
+            | Cons (x, xs) when x=c_end ->
+                    let delim_length = String.length Keyword.comment_end in
+                    let to_compare = seq_take delim_length sq in
+                    if String.of_seq to_compare = Keyword.comment_end
+                    then accumulate_until_open (seq_drop delim_length sq)
+                    else drop_until_close xs
+            | Cons (_, xs) -> drop_until_close xs
+            | Nil -> failwith "Comment opened but never closed."
+        in accumulate_until_open sq
+
 
     let is_digit = function
     | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> true
@@ -55,7 +102,7 @@ module Lexical (Keyword : KEYWORD) : LEXICAL = struct
 
     (** [scanning [] chars] is a list of all the tokens in chars *)
     let rec scanning toks chars =
-        match chars() with
+        match (ignore_comments chars) () with
         | Seq.Nil -> List.rev toks
         | Seq.Cons (c, rest) ->
                 if is_digit c
