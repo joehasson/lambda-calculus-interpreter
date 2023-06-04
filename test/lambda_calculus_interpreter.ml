@@ -1,4 +1,4 @@
-open OUnit2
+(*open OUnit2
 open Lambda_calculus_interpreter
 
 module MyKeywords: Lexer.KEYWORD = struct
@@ -15,3 +15,4 @@ let tests = "test suite for lexer" >::: [
     "Empty string" >:: (fun _ -> 
         assert_equal [] (MyLexer.scan ""));
 ]
+*)

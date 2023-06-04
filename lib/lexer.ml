@@ -10,7 +10,9 @@ end
           followed by a letter or digit. It is classified as a keyword iff it belongs to alphas.
         - A string of symbolic characters is scanned until it matches some element of [symbols],
           or until it is not followed by another symbolic character. It is always classified as
-          a keyword. For instance if [(] is in symbols then "((" is scanned as two "(" tokens,
+          a keyword. For instance if [(] is in symbols then "((" is scanned as two "(" t
+    
+kens,
           else as one "((" token. 
 
     Invariant I made up for exercises: comment_start and comment_end cannot begin with alphanumeric
@@ -45,7 +47,7 @@ let rec seq_drop n sq =
     | _, Nil -> failwith "Out of bounds"
     | n, Cons (_, xs) -> seq_drop (n-1) xs
 
-module Lexical (Keyword : KEYWORD) = struct
+module Lexical (Keyword : KEYWORD): LEXICAL = struct
     type token = Id of string | Key of string
 
     (** [ignore comments sq] is the sequence which is the result of ignoring every 
